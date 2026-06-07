@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Send } from "lucide-react";
-import type { BriefInput, PoleConcerned, SensitivityLevel } from "@/lib/types";
+import type { BriefInput, BriefSensitivityLevel, PoleConcerned } from "@/lib/types";
 
 const initialForm: BriefInput = {
   requester_name: "",
@@ -144,7 +144,7 @@ export function BriefForm() {
             className="control"
             value={form.sensitivity_level}
             onChange={(event) =>
-              updateField("sensitivity_level", event.target.value as SensitivityLevel)
+              updateField("sensitivity_level", event.target.value as BriefSensitivityLevel)
             }
           >
             <option value="standard">Standard</option>

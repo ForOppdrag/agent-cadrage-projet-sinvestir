@@ -1,0 +1,189 @@
+{
+  "name": "Agent pilotage facturation dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-pilotage-facturation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "pilotage-webhook",
+      "name": "Webhook - donnees facturation",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "agent-pilotage-facturation",
+      "notes": "Recoit les donnees envoyees par /api/pilotage en POST."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "period", "name": "period", "type": "string", "value": "={{ $json.body.period || $json.period }}" },
+            { "id": "billedRevenue", "name": "billedRevenue", "type": "number", "value": "={{ Number($json.body.billedRevenue || $json.billedRevenue || 0) }}" },
+            { "id": "overdueAmount", "name": "overdueAmount", "type": "number", "value": "={{ Number($json.body.overdueAmount || $json.overdueAmount || 0) }}" },
+            { "id": "invoiceCount", "name": "invoiceCount", "type": "number", "value": "={{ Number($json.body.invoiceCount || $json.invoiceCount || 0) }}" },
+            { "id": "overdueInvoiceCount", "name": "overdueInvoiceCount", "type": "number", "value": "={{ Number($json.body.overdueInvoiceCount || $json.overdueInvoiceCount || 0) }}" },
+            { "id": "invoiceData", "name": "invoiceData", "type": "string", "value": "={{ $json.body.invoiceData || $json.invoiceData || '' }}" },
+            { "id": "businessContext", "name": "businessContext", "type": "string", "value": "={{ $json.body.businessContext || $json.businessContext }}" },
+            { "id": "alertThreshold", "name": "alertThreshold", "type": "string", "value": "={{ $json.body.alertThreshold || $json.alertThreshold || '' }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "pilotage-set",
+      "name": "Set - normalisation facturation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [260, 0],
+      "notes": "Prepare les indicateurs et donnees brutes pour l'analyse LLM."
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant senior de pilotage interne. Analyse factures, activite et dashboard pour detecter retards, anomalies, doublons, montants inhabituels, clients actifs sans facture et incoherences. Tu ne valides jamais une action financiere ou contractuelle a la place d'un humain. Tu prepares les emails de relance sans les envoyer automatiquement si validation requise. Reponds uniquement en JSON valide avec le format attendu."
+            },
+            {
+              "role": "user",
+              "content": "Donnees de pilotage a analyser : {{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "pilotage-openai",
+      "name": "OpenAI - analyse anomalies dashboard",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [520, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "A_RECREER",
+          "name": "OpenAI API - a recreer"
+        }
+      },
+      "notes": "Reconnecter le credential OpenAI dans n8n."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "validation",
+              "leftValue": "={{ JSON.parse($json.message?.content || $json.text || '{}').validation_humaine_requise }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            },
+            {
+              "id": "anomalies",
+              "leftValue": "={{ Number(JSON.parse($json.message?.content || $json.text || '{}').indicateurs?.nombre_anomalies || 0) }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "larger" }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "pilotage-if",
+      "name": "IF - anomalies critiques ou validation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [780, 0],
+      "notes": "Les relances ou arbitrages financiers restent sous controle humain."
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "pilotage_analyses",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "period", "fieldValue": "={{ $('Set - normalisation facturation').item.json.period }}" },
+            { "fieldId": "raw_payload", "fieldValue": "={{ JSON.stringify($('Set - normalisation facturation').item.json) }}" },
+            { "fieldId": "analysis", "fieldValue": "={{ $json.message?.content || $json.text || JSON.stringify($json) }}" },
+            { "fieldId": "anomaly_count", "fieldValue": "={{ Number(JSON.parse($json.message?.content || $json.text || '{}').indicateurs?.nombre_anomalies || 0) }}" },
+            { "fieldId": "human_validation_required", "fieldValue": "true" },
+            { "fieldId": "status", "fieldValue": "pending_human_review" }
+          ]
+        }
+      },
+      "id": "pilotage-supabase",
+      "name": "Supabase - insertion pilotage_analyses",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1040, -120],
+      "credentials": {
+        "supabaseApi": {
+          "id": "A_RECREER",
+          "name": "Supabase - a recreer"
+        }
+      },
+      "notes": "Reconnecter l'URL et la cle Supabase dans n8n."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.REFERENT_PILOTAGE_EMAIL }}",
+        "subject": "Synthese pilotage facturation a verifier",
+        "message": "Bonjour,\n\nUne synthese de pilotage facturation necessite verification.\n\nPeriode : {{ $('Set - normalisation facturation').item.json.period }}\nMontant en retard : {{ $('Set - normalisation facturation').item.json.overdueAmount }}\nFactures en retard : {{ $('Set - normalisation facturation').item.json.overdueInvoiceCount }}\n\nAnalyse :\n{{ $('OpenAI - analyse anomalies dashboard').item.json.message?.content || $('OpenAI - analyse anomalies dashboard').item.json.text || JSON.stringify($('OpenAI - analyse anomalies dashboard').item.json) }}\n\nLes emails de relance sont prepares mais ne doivent pas etre envoyes sans validation humaine si le contenu est sensible."
+      },
+      "id": "pilotage-email",
+      "name": "Email Send - notification responsable",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1300, -120],
+      "credentials": {
+        "smtp": {
+          "id": "A_RECREER",
+          "name": "SMTP - a recreer"
+        }
+      },
+      "notes": "Peut etre remplace par Slack. Ne pas envoyer de donnees sensibles sans filtrage en production."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'submitted', human_validation_required: true, message: 'Analyse de pilotage transmise.' } }}",
+        "options": {}
+      },
+      "id": "pilotage-respond",
+      "name": "Respond to Webhook - pilotage",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 0],
+      "notes": "Retourne un statut simple a Next.js."
+    }
+  ],
+  "connections": {
+    "Webhook - donnees facturation": { "main": [[{ "node": "Set - normalisation facturation", "type": "main", "index": 0 }]] },
+    "Set - normalisation facturation": { "main": [[{ "node": "OpenAI - analyse anomalies dashboard", "type": "main", "index": 0 }]] },
+    "OpenAI - analyse anomalies dashboard": { "main": [[{ "node": "IF - anomalies critiques ou validation", "type": "main", "index": 0 }]] },
+    "IF - anomalies critiques ou validation": {
+      "main": [
+        [{ "node": "Supabase - insertion pilotage_analyses", "type": "main", "index": 0 }],
+        [{ "node": "Supabase - insertion pilotage_analyses", "type": "main", "index": 0 }]
+      ]
+    },
+    "Supabase - insertion pilotage_analyses": { "main": [[{ "node": "Email Send - notification responsable", "type": "main", "index": 0 }]] },
+    "Email Send - notification responsable": { "main": [[{ "node": "Respond to Webhook - pilotage", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "versionId": "poc-pilotage-2026-06-07"
+}

@@ -1,0 +1,197 @@
+{
+  "name": "Agent preanalyse patrimoniale",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-preanalyse-patrimoniale",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "patrimoine-webhook",
+      "name": "Webhook - demande patrimoniale",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "agent-preanalyse-patrimoniale",
+      "notes": "Recoit les donnees envoyees par /api/patrimoine en POST."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "name", "name": "name", "type": "string", "value": "={{ $json.body.name || $json.name || '' }}" },
+            { "id": "email", "name": "email", "type": "string", "value": "={{ $json.body.email || $json.email }}" },
+            { "id": "age", "name": "age", "type": "number", "value": "={{ Number($json.body.age || $json.age || 0) }}" },
+            { "id": "familySituation", "name": "familySituation", "type": "string", "value": "={{ $json.body.familySituation || $json.familySituation || '' }}" },
+            { "id": "professionalStatus", "name": "professionalStatus", "type": "string", "value": "={{ $json.body.professionalStatus || $json.professionalStatus || '' }}" },
+            { "id": "monthlyIncome", "name": "monthlyIncome", "type": "string", "value": "={{ $json.body.monthlyIncome || $json.monthlyIncome || '' }}" },
+            { "id": "monthlySavings", "name": "monthlySavings", "type": "string", "value": "={{ $json.body.monthlySavings || $json.monthlySavings || '' }}" },
+            { "id": "estimatedAssets", "name": "estimatedAssets", "type": "string", "value": "={{ $json.body.estimatedAssets || $json.estimatedAssets || '' }}" },
+            { "id": "debts", "name": "debts", "type": "string", "value": "={{ $json.body.debts || $json.debts || '' }}" },
+            { "id": "existingProducts", "name": "existingProducts", "type": "string", "value": "={{ $json.body.existingProducts || $json.existingProducts || '' }}" },
+            { "id": "mainObjective", "name": "mainObjective", "type": "string", "value": "={{ $json.body.mainObjective || $json.mainObjective }}" },
+            { "id": "investmentHorizon", "name": "investmentHorizon", "type": "string", "value": "={{ $json.body.investmentHorizon || $json.investmentHorizon || '' }}" },
+            { "id": "riskTolerance", "name": "riskTolerance", "type": "string", "value": "={{ $json.body.riskTolerance || $json.riskTolerance || '' }}" },
+            { "id": "sensitiveTopic", "name": "sensitiveTopic", "type": "string", "value": "={{ $json.body.sensitiveTopic || $json.sensitiveTopic || '' }}" },
+            { "id": "freeDescription", "name": "freeDescription", "type": "string", "value": "={{ $json.body.freeDescription || $json.freeDescription }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "patrimoine-set",
+      "name": "Set - normalisation patrimoniale",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [260, 0],
+      "notes": "Normalise le payload utilisateur avant l'appel LLM."
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant senior de pre-analyse patrimoniale pour une entreprise d'education financiere et de gestion de patrimoine. Tu ne donnes jamais de conseil financier personnalise definitif, tu ne recommandes jamais d'acheter, vendre ou arbitrer un produit financier, tu imposes une validation humaine pour toute decision fiscale, juridique, successorale, patrimoniale ou contractuelle. Reponds uniquement en JSON valide avec le format attendu : type_agent, profil_general, reformulation_objectif, categorie_besoin, horizon, tolerance_risque_declaree, informations_manquantes, points_attention, documents_a_fournir, questions_pour_conseiller, niveau_sensibilite, validation_humaine_requise, raison_validation, synthese_conseiller, prochaine_action."
+            },
+            {
+              "role": "user",
+              "content": "Analyse preparatoire patrimoniale : {{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "patrimoine-openai",
+      "name": "OpenAI - analyse patrimoniale prudente",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [520, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "A_RECREER",
+          "name": "OpenAI API - a recreer"
+        }
+      },
+      "notes": "Reconnecter le credential OpenAI dans n8n."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "validation",
+              "leftValue": "={{ JSON.parse($json.message?.content || $json.text || '{}').validation_humaine_requise }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            },
+            {
+              "id": "sensibilite",
+              "leftValue": "={{ JSON.parse($json.message?.content || $json.text || '{}').niveau_sensibilite }}",
+              "rightValue": "eleve",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "patrimoine-if",
+      "name": "IF - validation humaine patrimoine",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [780, 0],
+      "notes": "Toute decision sensible doit passer par un conseiller humain."
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "patrimoine_analyses",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "requester_name", "fieldValue": "={{ $('Set - normalisation patrimoniale').item.json.name }}" },
+            { "fieldId": "requester_email", "fieldValue": "={{ $('Set - normalisation patrimoniale').item.json.email }}" },
+            { "fieldId": "raw_payload", "fieldValue": "={{ JSON.stringify($('Set - normalisation patrimoniale').item.json) }}" },
+            { "fieldId": "analysis", "fieldValue": "={{ $json.message?.content || $json.text || JSON.stringify($json) }}" },
+            { "fieldId": "sensitivity_level", "fieldValue": "={{ JSON.parse($json.message?.content || $json.text || '{}').niveau_sensibilite || 'eleve' }}" },
+            { "fieldId": "human_validation_required", "fieldValue": "true" },
+            { "fieldId": "status", "fieldValue": "pending_human_review" }
+          ]
+        }
+      },
+      "id": "patrimoine-supabase",
+      "name": "Supabase - insertion patrimoine_analyses",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1040, -120],
+      "credentials": {
+        "supabaseApi": {
+          "id": "A_RECREER",
+          "name": "Supabase - a recreer"
+        }
+      },
+      "notes": "Reconnecter l'URL et la cle Supabase dans n8n."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.REFERENT_PATRIMOINE_EMAIL }}",
+        "subject": "Pre-analyse patrimoniale a valider",
+        "message": "Bonjour,\n\nUne pre-analyse patrimoniale necessite une validation humaine.\n\nDemandeur : {{ $('Set - normalisation patrimoniale').item.json.name }}\nEmail : {{ $('Set - normalisation patrimoniale').item.json.email }}\nObjectif : {{ $('Set - normalisation patrimoniale').item.json.mainObjective }}\n\nAnalyse :\n{{ $('OpenAI - analyse patrimoniale prudente').item.json.message?.content || $('OpenAI - analyse patrimoniale prudente').item.json.text || JSON.stringify($('OpenAI - analyse patrimoniale prudente').item.json) }}\n\nAucune decision financiere, fiscale, juridique ou patrimoniale ne doit etre prise sans validation."
+      },
+      "id": "patrimoine-email",
+      "name": "Email Send - notification conseiller",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1300, -120],
+      "credentials": {
+        "smtp": {
+          "id": "A_RECREER",
+          "name": "SMTP - a recreer"
+        }
+      },
+      "notes": "Peut etre remplace par Gmail. Ne pas envoyer de donnees sensibles sans filtrage en production."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'submitted', human_validation_required: true, message: 'Pre-analyse transmise au conseiller.' } }}",
+        "options": {}
+      },
+      "id": "patrimoine-respond",
+      "name": "Respond to Webhook - patrimoine",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 0],
+      "notes": "Retourne un statut simple a Next.js."
+    }
+  ],
+  "connections": {
+    "Webhook - demande patrimoniale": { "main": [[{ "node": "Set - normalisation patrimoniale", "type": "main", "index": 0 }]] },
+    "Set - normalisation patrimoniale": { "main": [[{ "node": "OpenAI - analyse patrimoniale prudente", "type": "main", "index": 0 }]] },
+    "OpenAI - analyse patrimoniale prudente": { "main": [[{ "node": "IF - validation humaine patrimoine", "type": "main", "index": 0 }]] },
+    "IF - validation humaine patrimoine": {
+      "main": [
+        [{ "node": "Supabase - insertion patrimoine_analyses", "type": "main", "index": 0 }],
+        [{ "node": "Supabase - insertion patrimoine_analyses", "type": "main", "index": 0 }]
+      ]
+    },
+    "Supabase - insertion patrimoine_analyses": { "main": [[{ "node": "Email Send - notification conseiller", "type": "main", "index": 0 }]] },
+    "Email Send - notification conseiller": { "main": [[{ "node": "Respond to Webhook - patrimoine", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "versionId": "poc-patrimoine-2026-06-07"
+}

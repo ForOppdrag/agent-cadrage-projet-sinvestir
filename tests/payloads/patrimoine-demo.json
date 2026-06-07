@@ -1,0 +1,18 @@
+{
+  "name": "Camille Martin",
+  "email": "camille.martin@example.com",
+  "age": 38,
+  "familySituation": "En couple, deux enfants",
+  "professionalStatus": "Salarie cadre",
+  "monthlyIncome": "5200",
+  "monthlySavings": "800",
+  "estimatedAssets": "Residence principale, epargne de precaution, PEA existant",
+  "debts": "Credit immobilier en cours",
+  "existingProducts": "PEA, livret A, assurance emprunteur",
+  "mainObjective": "Preparer ma retraite",
+  "investmentHorizon": "Long terme, plus de 15 ans",
+  "riskTolerance": "Moderee",
+  "sensitiveTopic": "Question sur assurance-vie et fiscalite",
+  "freeDescription": "Je souhaite organiser mon epargne pour la retraite sans prendre de decision immediate. Je veux comprendre les documents a preparer avant un rendez-vous conseiller.",
+  "human_validation_required": true
+}

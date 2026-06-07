@@ -224,6 +224,76 @@ button:disabled {
   font-size: 0.9rem;
 }
 
+.agent-layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.notice {
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.notice h2 {
+  color: #ffffff;
+  font-size: 1rem;
+  margin: 0 0 0.4rem;
+}
+
+.notice p {
+  color: #cbd5e1;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.notice-info {
+  background: rgba(14, 116, 144, 0.14);
+  border-color: rgba(34, 211, 238, 0.32);
+}
+
+.notice-success {
+  background: rgba(5, 150, 105, 0.14);
+  border-color: rgba(110, 231, 183, 0.32);
+}
+
+.notice-warning {
+  background: rgba(161, 98, 7, 0.16);
+  border-color: rgba(251, 191, 36, 0.34);
+}
+
+.notice-error {
+  background: rgba(185, 28, 28, 0.16);
+  border-color: rgba(252, 165, 165, 0.34);
+}
+
+.dashboard-preview {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  display: grid;
+  gap: 0.4rem;
+  min-height: 5rem;
+  padding: 1rem;
+}
+
+.metric span {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.metric strong {
+  color: #ffffff;
+  font-size: 1.3rem;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 720px) {
   .header-inner,
   .form-actions {
@@ -237,5 +307,9 @@ button:disabled {
 
   .brief-form {
     padding: 1rem;
+  }
+
+  .dashboard-preview {
+    grid-template-columns: 1fr;
   }
 }

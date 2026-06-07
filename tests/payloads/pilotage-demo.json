@@ -1,0 +1,11 @@
+{
+  "period": "Mois en cours",
+  "billedRevenue": 38490,
+  "overdueAmount": 12770,
+  "invoiceCount": 9,
+  "overdueInvoiceCount": 3,
+  "invoiceData": "[{\"client\":\"Beta Media\",\"invoice\":\"INV-2026-002\",\"amount\":2450,\"status\":\"overdue\"},{\"client\":\"Beta Media\",\"invoice\":\"INV-2026-002-DUP\",\"amount\":2450,\"status\":\"potential_duplicate\"},{\"client\":\"Delta Formation\",\"invoice\":\"INV-2026-004\",\"amount\":7800,\"status\":\"overdue\"},{\"client\":\"Epsilon Invest\",\"invoice\":\"INV-2026-005\",\"amount\":18500,\"status\":\"unusual_amount\"}]",
+  "businessContext": "L'equipe administrative veut preparer une synthese hebdomadaire et des emails de relance a valider avant envoi.",
+  "alertThreshold": "Montant en retard superieur a 10000 ou doublon potentiel",
+  "human_validation_required": true
+}

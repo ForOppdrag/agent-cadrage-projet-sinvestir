@@ -74,6 +74,48 @@ npm run dev
 
 Puis ouvrir `http://localhost:3000`.
 
+Routes disponibles :
+
+- `http://localhost:3000`
+- `http://localhost:3000/patrimoine`
+- `http://localhost:3000/pilotage`
+
+## Agents IA ajoutes
+
+### 1. Agent IA de pre-analyse patrimoniale
+
+Cet agent aide a structurer une situation patrimoniale avant passage a un conseiller humain. Il reformule l'objectif, identifie les informations manquantes, classe le besoin, liste les documents a fournir et impose une validation humaine.
+
+- Interface locale : `http://localhost:3000/patrimoine`
+- Endpoint Next.js : `POST /api/patrimoine`
+- Webhook n8n : `N8N_PATRIMOINE_WEBHOOK_URL`
+- Workflow : `n8n/workflows/agent-preanalyse-patrimoniale.json`
+- Prompt : `n8n/prompts/system-prompt-patrimoine.md`
+
+L'agent ne donne jamais de conseil financier personnalise definitif et ne recommande jamais d'achat, vente ou arbitrage de produit financier.
+
+### 2. Agent IA de pilotage interne
+
+Cet agent analyse les donnees de facturation interne, detecte retards, doublons, montants inhabituels et indicateurs critiques, puis prepare une synthese de pilotage.
+
+- Interface locale : `http://localhost:3000/pilotage`
+- Endpoint Next.js : `POST /api/pilotage`
+- Webhook n8n : `N8N_PILOTAGE_WEBHOOK_URL`
+- Workflow : `n8n/workflows/agent-pilotage-facturation-dashboard.json`
+- Prompt : `n8n/prompts/system-prompt-pilotage.md`
+
+Les emails de relance peuvent etre prepares, mais ne doivent pas etre envoyes automatiquement si une validation humaine est requise.
+
+## Test des deux agents
+
+1. Copier `.env.example` en `.env.local`.
+2. Renseigner `N8N_PATRIMOINE_WEBHOOK_URL`.
+3. Renseigner `N8N_PILOTAGE_WEBHOOK_URL`.
+4. Importer les workflows n8n.
+5. Recreer les credentials OpenAI, Gmail/SMTP et Supabase dans n8n.
+6. Lancer `npm run dev`.
+7. Tester les deux agents depuis `/patrimoine` et `/pilotage`.
+
 ## Deploiement futur sur Vercel
 
 Le projet est pret pour Vercel :
