@@ -1,0 +1,242 @@
+{
+  "name": "Agent cadrage projet MVP",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-cadrage-projet",
+        "responseMode": "onReceived",
+        "responseCode": 200,
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "id": "webhook-recevoir-brief",
+      "name": "Webhook - recevoir le brief",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "agent-cadrage-projet"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "requester_name",
+              "name": "requester_name",
+              "type": "string",
+              "value": "={{ $json.body.requester_name || $json.requester_name }}"
+            },
+            {
+              "id": "requester_email",
+              "name": "requester_email",
+              "type": "string",
+              "value": "={{ $json.body.requester_email || $json.requester_email }}"
+            },
+            {
+              "id": "pole",
+              "name": "pole",
+              "type": "string",
+              "value": "={{ $json.body.pole || $json.pole }}"
+            },
+            {
+              "id": "urgency",
+              "name": "urgency",
+              "type": "string",
+              "value": "={{ $json.body.urgency || $json.urgency }}"
+            },
+            {
+              "id": "raw_need",
+              "name": "raw_need",
+              "type": "string",
+              "value": "={{ $json.body.raw_need || $json.raw_need }}"
+            },
+            {
+              "id": "expected_goal",
+              "name": "expected_goal",
+              "type": "string",
+              "value": "={{ $json.body.expected_goal || $json.expected_goal }}"
+            },
+            {
+              "id": "constraints",
+              "name": "constraints",
+              "type": "string",
+              "value": "={{ $json.body.constraints || $json.constraints || '' }}"
+            },
+            {
+              "id": "desired_deadline",
+              "name": "desired_deadline",
+              "type": "string",
+              "value": "={{ $json.body.desired_deadline || $json.desired_deadline || '' }}"
+            },
+            {
+              "id": "tools_used",
+              "name": "tools_used",
+              "type": "string",
+              "value": "={{ $json.body.tools_used || $json.tools_used || '' }}"
+            },
+            {
+              "id": "sensitivity_level",
+              "name": "sensitivity_level",
+              "type": "string",
+              "value": "={{ $json.body.sensitivity_level || $json.sensitivity_level }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-normaliser-champs",
+      "name": "Set - normaliser les champs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant senior de cadrage projet IA pour une entreprise media, investissement et gestion de patrimoine.\n\nTa mission est de transformer un brief metier brut en fiche projet claire, challengee et exploitable par une equipe interne, un developpeur ou un consultant no-code/low-code.\n\nRegles absolues :\n- Reformule toujours le besoin reel avant de proposer une solution.\n- Separe clairement le MVP de la version avancee.\n- Identifie les zones floues et genere les questions de clarification utiles.\n- Signale toute decision sensible : commerciale, financiere, juridique, RH ou contractuelle.\n- Ne prends jamais de decision finale sur un sujet sensible sans validation humaine.\n- Propose des solutions simples, testables et compatibles avec n8n, Next.js, Supabase et Vercel.\n- Reponds uniquement en JSON valide.\n\nFormat de sortie attendu :\n{\n  \"reformulation\": \"\",\n  \"objectif\": \"\",\n  \"hypotheses\": [],\n  \"questions_clarification\": [],\n  \"mvp\": { \"description\": \"\", \"etapes\": [] },\n  \"workflow_n8n\": [],\n  \"donnees_necessaires\": [],\n  \"risques\": [],\n  \"validation_humaine_requise\": true,\n  \"raison_validation\": \"\",\n  \"checklist_recette\": [],\n  \"prochaine_action\": \"\"\n}"
+            },
+            {
+              "role": "user",
+              "content": "Brief a analyser :\nDemandeur : {{ $json.requester_name }}\nEmail : {{ $json.requester_email }}\nPole : {{ $json.pole }}\nUrgence : {{ $json.urgency }}\nBesoin brut : {{ $json.raw_need }}\nObjectif attendu : {{ $json.expected_goal }}\nContraintes : {{ $json.constraints }}\nEcheance : {{ $json.desired_deadline }}\nOutils utilises : {{ $json.tools_used }}\nNiveau de sensibilite : {{ $json.sensitivity_level }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "openai-generer-fiche-projet",
+      "name": "OpenAI - analyser et generer la fiche projet",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [560, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "A_RECREER",
+          "name": "OpenAI API - a recreer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "validation-ia",
+              "leftValue": "={{ JSON.parse($json.message?.content || $json.text || '{}').validation_humaine_requise }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "sensibilite",
+              "leftValue": "={{ $('Set - normaliser les champs').item.json.sensitivity_level }}",
+              "rightValue": "standard",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "if-validation-humaine",
+      "name": "IF - verifier validation humaine",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [840, 0]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.REFERENT_EMAIL || $('Set - normaliser les champs').item.json.requester_email }}",
+        "subject": "Fiche projet a valider - {{ $('Set - normaliser les champs').item.json.pole }}",
+        "message": "Bonjour,\n\nUne fiche projet necessite une validation humaine.\n\nDemandeur : {{ $('Set - normaliser les champs').item.json.requester_name }}\nPole : {{ $('Set - normaliser les champs').item.json.pole }}\nUrgence : {{ $('Set - normaliser les champs').item.json.urgency }}\nSensibilite : {{ $('Set - normaliser les champs').item.json.sensitivity_level }}\n\nFiche projet generee :\n{{ $json.message?.content || $json.text || JSON.stringify($json) }}\n\nMerci de valider les points sensibles avant toute execution.",
+        "options": {}
+      },
+      "id": "gmail-notifier-referent",
+      "name": "Gmail - envoyer la fiche au referent",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1120, -120],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "A_RECREER",
+          "name": "Gmail OAuth2 - a recreer"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - recevoir le brief": {
+      "main": [
+        [
+          {
+            "node": "Set - normaliser les champs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set - normaliser les champs": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - analyser et generer la fiche projet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - analyser et generer la fiche projet": {
+      "main": [
+        [
+          {
+            "node": "IF - verifier validation humaine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - verifier validation humaine": {
+      "main": [
+        [
+          {
+            "node": "Gmail - envoyer la fiche au referent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-06-07T00:00:00.000Z",
+  "versionId": "mvp-5-noeuds"
+}
